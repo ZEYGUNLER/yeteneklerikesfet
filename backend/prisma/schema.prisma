@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+ 
+}
+
+enum Role {
+  PARENT
+}
+
+enum SessionStatus {
+  ACTIVE
+  COMPLETED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      Role     @default(PARENT)
+  children  Child[]
+  createdAt DateTime @default(now())
+}
+
+model Child {
+  id        String        @id @default(uuid())
+  name      String
+  age       Int
+  userId    String
+  user      User          @relation(fields: [userId], references: [id])
+  sessions  GameSession[]
+  createdAt DateTime      @default(now())
+}
+
+model GameSession {
+  id        String        @id @default(uuid())
+  childId   String
+  gameId    String
+  startTime DateTime      @default(now())
+  endTime   DateTime?
+  status    SessionStatus @default(ACTIVE)
+  score     Int?
+  duration  Int?
+  accuracy  Float?
+  child     Child         @relation(fields: [childId], references: [id])
+  createdAt DateTime      @default(now())
+}
+
+model SkillProfile {
+  id          String   @id @default(uuid())
+  childId     String   @unique
+  memory      Int      @default(0)
+  attention   Int      @default(0)
+  logic       Int      @default(0)
+  lastUpdated DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
