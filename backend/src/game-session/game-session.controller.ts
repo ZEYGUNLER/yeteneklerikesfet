@@ -14,6 +14,10 @@ export class GameSessionController {
 
   @Post('end')
   end(@Body() dto: EndSessionDto) {
-    return this.gameSessions.end(dto.sessionId);
+    return this.gameSessions.end(dto.sessionId, {
+      score: dto.score ?? 0,
+      duration: dto.duration ?? 0,
+      accuracy: dto.accuracy ?? 0,
+    });
   }
 }

@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { GameSessionController } from './game-session.controller';
 import { GameSessionService } from './game-session.service';
+import { AnalyticsModule } from '../modules/analytics/analytics.module';
 
 @Module({
+  imports: [AnalyticsModule],
   controllers: [GameSessionController],
   providers: [GameSessionService],
 })
