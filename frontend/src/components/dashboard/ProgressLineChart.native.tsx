@@ -7,28 +7,30 @@ type ProgressLineChartProps = {
 };
 
 export const ProgressLineChart = ({ data }: ProgressLineChartProps) => {
-  const width = Math.max(Dimensions.get('window').width - 64, 300);
+  const width = Math.max(Dimensions.get('window').width - 70, 300);
 
-  const labels = data.map((point) =>
-    new Date(point.date).toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-    }),
+  const labels = data.map((point, index) =>
+    // Keep labels readable on smaller widths by showing every other label.
+    index % 2 === 0
+      ? new Date(point.date).toLocaleDateString(undefined, {
+          month: 'short',
+          day: 'numeric',
+        })
+      : ''
   );
 
   return (
     <View style={styles.container}>
       <LineChart
         width={width}
-        height={220}
+        height={230}
         data={{
           labels,
           datasets: [
-            { data: data.map((item) => item.memory), color: () => '#2563EB' },
-            { data: data.map((item) => item.attention), color: () => '#10B981' },
-            { data: data.map((item) => item.logic), color: () => '#F59E0B' },
+            { data: data.map((item) => item.memory), color: () => '#2563EB', strokeWidth: 3 },
+            { data: data.map((item) => item.attention), color: () => '#10B981', strokeWidth: 3 },
+            { data: data.map((item) => item.logic), color: () => '#F59E0B', strokeWidth: 3 },
           ],
-          legend: ['Memory', 'Attention', 'Logic'],
         }}
         chartConfig={{
           backgroundColor: '#FFFFFF',
@@ -38,11 +40,22 @@ export const ProgressLineChart = ({ data }: ProgressLineChartProps) => {
           color: (opacity = 1) => `rgba(55, 65, 81, ${opacity})`,
           labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
           propsForDots: {
-            r: '2',
+            r: '4',
+            strokeWidth: '0',
+          },
+          propsForLabels: {
+            fontSize: 12,
+            fontWeight: '600',
+          },
+          propsForBackgroundLines: {
+            strokeDasharray: '4',
+            stroke: '#F3F4F6',
           },
         }}
-        bezier
+        withVerticalLines={false}
         withShadow={false}
+        withInnerLines
+        bezier
         style={styles.chart}
       />
     </View>
@@ -52,6 +65,8 @@ export const ProgressLineChart = ({ data }: ProgressLineChartProps) => {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
+    marginTop: 2,
+    marginLeft: -10,
   },
   chart: {
     borderRadius: 12,

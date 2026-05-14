@@ -1,19 +1,14 @@
-import { create } from 'axios';
-
-const analyticsApi = create({
-  baseURL: process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000',
-  timeout: 10000,
-});
+import { api } from './api';
 
 export const analyticsService = {
   getSkillProfile(childId: string) {
-    return analyticsApi.get(`/analytics/skill-profile/${childId}`);
+    return api.get(`/analytics/skill-profile/${childId}`);
   },
   getProgress(childId: string) {
-    return analyticsApi.get(`/analytics/progress/${childId}`);
+    return api.get(`/analytics/progress/${childId}`);
   },
   getInsight(childId: string) {
-    return analyticsApi.get(`/analytics/dashboard/${childId}`);
+    return api.get(`/analytics/dashboard/${childId}`);
   },
 };
 

@@ -9,23 +9,38 @@ export class GameSessionService {
     private readonly analytics: AnalyticsService,
   ) {}
 
-  async start(childId: string, gameId: string) {
-    const session = await this.prisma.gameSession.create({
-      data: { childId, gameId },
+  async start(userId: string, childId: string, gameId: string) {
+    const child = await this.prisma.child.findFirst({
+      where: { id: childId, userId },
       select: { id: true },
     });
-    return { sessionId: session.id };
+    if (!child) {
+      throw new NotFoundException('Child not found');
+    }
+
+    const session = await this.prisma.gameSession.create({
+      data: { childId, gameId },
+      select: { id: true, childId: true, gameId: true, startTime: true },
+    });
+
+    return {
+      sessionId: session.id,
+      childId: session.childId,
+      gameId: session.gameId,
+      startedAt: session.startTime,
+    };
   }
 
-  async end(sessionId: string, metrics?: SessionMetrics) {
-    const existing = await this.prisma.gameSession.findUnique({
-      where: { id: sessionId },
+  async end(userId: string, sessionId: string, metrics?: SessionMetrics) {
+    const existing = await this.prisma.gameSession.findFirst({
+      where: { id: sessionId, child: { userId } },
+      select: { id: true, childId: true, status: true },
     });
     if (!existing) {
       throw new NotFoundException('Session not found');
     }
     if (existing.status === 'COMPLETED') {
-      return { success: true };
+      return { success: true, sessionId: existing.id };
     }
 
     const scoreRaw = metrics?.score ?? 0;
@@ -68,6 +83,6 @@ export class GameSessionService {
       duration,
       accuracy,
     });
-    return { success: true };
+    return { success: true, sessionId: existing.id };
   }
 }

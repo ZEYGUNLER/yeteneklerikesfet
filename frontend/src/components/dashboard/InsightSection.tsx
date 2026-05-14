@@ -4,13 +4,15 @@ import type { DashboardInsight } from '../../types/dashboard.types';
 
 type InsightSectionProps = {
   insight: DashboardInsight | null;
+  isMobile: boolean;
 };
 
-export const InsightSection = ({ insight }: InsightSectionProps) => {
+export const InsightSection = ({ insight, isMobile }: InsightSectionProps) => {
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>System Insight</Text>
-      <InsightCard insight={insight} />
+      <Text style={styles.sectionSubtitle}>Helpful guidance from latest analysis</Text>
+      <InsightCard insight={insight} isMobile={isMobile} />
     </View>
   );
 };
@@ -20,9 +22,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
     color: '#111827',
+  },
+  sectionSubtitle: {
+    color: '#4B5563',
+    fontSize: 14,
+    marginBottom: 4,
   },
 });
 

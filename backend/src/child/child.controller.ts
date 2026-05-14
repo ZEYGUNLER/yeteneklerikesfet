@@ -11,7 +11,7 @@ export class ChildController {
 
   @Post()
   create(@CurrentUser() user: { sub: string }, @Body() dto: CreateChildDto) {
-    return this.children.createForParent(user.sub, dto.name, dto.age);
+    return this.children.createForParent(user.sub, dto);
   }
 
   @Get()

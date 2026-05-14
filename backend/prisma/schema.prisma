@@ -27,8 +27,14 @@ model User {
 
 model Child {
   id        String        @id @default(uuid())
-  name      String
-  age       Int
+  name      String?       // Deprecated: use firstName/lastName
+  firstName String        @default("")
+  lastName  String        @default("")
+  age       Int?          // Deprecated: use birthDate
+  birthDate DateTime      @default(now())
+  gender    String        @default("other")
+  avatar    String        @default("bear")
+  notes     String?
   userId    String
   user      User          @relation(fields: [userId], references: [id])
   sessions  GameSession[]
