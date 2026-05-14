@@ -1,14 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateChildDto } from './dto/create-child.dto';
 
 @Injectable()
 export class ChildService {
   constructor(private readonly prisma: PrismaService) {}
 
-  createForParent(userId: string, name: string, age: number) {
+  createForParent(userId: string, dto: CreateChildDto) {
+    const { name, age, birthDate, ...rest } = dto;
     return this.prisma.child.create({
-      data: { userId, name, age },
-      select: { id: true, name: true, age: true, createdAt: true },
+      data: { 
+        ...rest,
+        userId, 
+        name: name || rest.firstName, 
+        age: age || 0,
+        birthDate: new Date(birthDate),
+      },
     });
   }
 
@@ -16,7 +23,6 @@ export class ChildService {
     return this.prisma.child.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      select: { id: true, name: true, age: true, createdAt: true },
     });
   }
 }

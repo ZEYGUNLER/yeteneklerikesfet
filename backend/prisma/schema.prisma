@@ -27,8 +27,14 @@ model User {
 
 model Child {
   id        String        @id @default(uuid())
-  name      String
-  age       Int
+  name      String?       // Deprecated: use firstName/lastName
+  firstName String        @default("")
+  lastName  String        @default("")
+  age       Int?          // Deprecated: use birthDate
+  birthDate DateTime      @default(now())
+  gender    String        @default("other")
+  avatar    String        @default("bear")
+  notes     String?
   userId    String
   user      User          @relation(fields: [userId], references: [id])
   sessions  GameSession[]
@@ -50,12 +56,29 @@ model GameSession {
 }
 
 model SkillProfile {
-  id          String   @id @default(uuid())
-  childId     String   @unique
-  memory      Int      @default(0)
-  attention   Int      @default(0)
-  logic       Int      @default(0)
-  lastUpdated DateTime @updatedAt
+  id        String   @id @default(uuid())
+  childId   String   @unique
+  memory    Float    @default(0)
+  attention Float    @default(0)
+  logic     Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model ProgressReport {
+  id        String   @id @default(uuid())
+  childId   String
+
+  memory    Float
+  attention Float
+  logic     Float
+
+  score     Float
+  duration  Float
+
+  createdAt DateTime @default(now())
+
+  @@index([childId, createdAt])
 }
 
 model Notification {
