@@ -1,15 +1,20 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { DashboardCard } from './DashboardCard';
-import type { DashboardInsight } from '../../types/dashboard.types';
+import type { DashboardInsight, SkillSummary } from '../../types/dashboard.types';
+import { generateInsights } from '../../services/insightEngine';
 
 interface InsightSectionProps {
   insight: DashboardInsight | null;
+  summary?: SkillSummary | null;
+  sessionCount?: number;
 }
 
-export const InsightSection = ({ insight }: InsightSectionProps) => {
+export const InsightSection = ({ insight, summary, sessionCount = 0 }: InsightSectionProps) => {
   const isPositive = insight?.trend === 'positive';
   const isWarning = insight?.trend === 'warning';
+  
+  const generatedInsights = generateInsights(summary || null, sessionCount);
 
   return (
     <DashboardCard 
@@ -34,17 +39,17 @@ export const InsightSection = ({ insight }: InsightSectionProps) => {
           </Text>
         </View>
         <Text style={styles.message}>
-          {insight?.message || 'Veriler analiz ediliyor, yakında yeni öngörüler paylaşacağız.'}
+          {insight?.message || generatedInsights[0]}
         </Text>
         
-        <View style={styles.footer}>
-          <Text style={styles.actionLabel}>Önerilen Eylem:</Text>
-          <Text style={styles.actionText}>
-            {isPositive 
-              ? 'Çocuğunuzu tebrik edin ve bir üst seviye oyunları deneyin.' 
-              : 'Günde 10 dakika "Hafıza Bahçesi" oynaması faydalı olabilir.'}
-          </Text>
-        </View>
+        {insight?.message && generatedInsights[0] && (
+          <View style={styles.footer}>
+            <Text style={styles.actionLabel}>Otomatik Öngörü:</Text>
+            <Text style={styles.actionText}>
+              {generatedInsights[0]}
+            </Text>
+          </View>
+        )}
       </View>
     </DashboardCard>
   );

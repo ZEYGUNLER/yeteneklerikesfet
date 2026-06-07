@@ -6,6 +6,7 @@ const SELECTED_CHILD_KEY = 'yk.child.selected';
 
 type ChildContextType = {
   selectedChild: Child | null;
+  isRestoring: boolean;
   setSelectedChild: (child: Child | null) => Promise<void>;
 };
 
@@ -13,16 +14,22 @@ const ChildContext = createContext<ChildContextType | undefined>(undefined);
 
 export const ChildProvider = ({ children }: { children: React.ReactNode }) => {
   const [selectedChild, setSelectedChildState] = useState<Child | null>(null);
+  const [isRestoring, setIsRestoring] = useState(true);
 
   useEffect(() => {
     const restore = async () => {
       const raw = await persist.get(SELECTED_CHILD_KEY);
-      if (!raw) return;
+      if (!raw) {
+        setIsRestoring(false);
+        return;
+      }
       try {
         const parsed = JSON.parse(raw) as Child;
         setSelectedChildState(parsed);
       } catch {
         await persist.remove(SELECTED_CHILD_KEY);
+      } finally {
+        setIsRestoring(false);
       }
     };
     restore();
@@ -31,6 +38,7 @@ export const ChildProvider = ({ children }: { children: React.ReactNode }) => {
   const value = useMemo<ChildContextType>(
     () => ({
       selectedChild,
+      isRestoring,
       setSelectedChild: async (child) => {
         setSelectedChildState(child);
         if (child) {
@@ -40,7 +48,7 @@ export const ChildProvider = ({ children }: { children: React.ReactNode }) => {
         }
       },
     }),
-    [selectedChild],
+    [selectedChild, isRestoring],
   );
 
   return <ChildContext.Provider value={value}>{children}</ChildContext.Provider>;

@@ -51,6 +51,7 @@ model GameSession {
   score     Int?
   duration  Int?
   accuracy  Float?
+  metadata  Json?
   child     Child         @relation(fields: [childId], references: [id])
   createdAt DateTime      @default(now())
 }

@@ -1,32 +1,31 @@
 import { useState, useEffect } from 'react';
-import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View, ScrollView } from 'react-native';
-import { InsightSection } from '@/components/parent/InsightSection';
-import { ProgressChartSection } from '@/components/parent/ProgressChartSection';
-import { SkillSummarySection } from '@/components/parent/SkillSummarySection';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { ChildSwitcher } from '@/components/parent/ChildSwitcher';
-import { useDashboard } from '../../hooks/useDashboard';
+import { GozcuKarnesi } from '@/components/parent/GozcuKarnesi';
+import { ProfileAggregationService, AggregateProfileReport } from '@/services/profileAggregationService';
 import { useAuth } from '@/hooks/useAuth';
 import { useChildContext } from '@/context/ChildContext';
 import { useChildren } from '@/hooks/useChildren';
 import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { navigationService } from '@/navigation/navigation.service';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Child } from '@/services/child.service';
 
-type DashboardScreenProps = {
-  childId: string;
-};
-
-export const DashboardScreen = ({ childId }: DashboardScreenProps) => {
+export const DashboardScreen = ({ childId: propChildId }: { childId: string }) => {
   const { width } = useWindowDimensions();
-  const { summary, progress, insight, loading, error } = useDashboard(childId);
-  
-  const isDesktop = width >= 1024;
-  const isTablet = width >= 768 && width < 1024;
-  const isWide = isDesktop || isTablet;
-
   const { logout } = useAuth();
   const { selectedChild, setSelectedChild } = useChildContext();
   const { children } = useChildren();
+  const queryClient = useQueryClient();
+
+  const effectiveChildId = selectedChild?.id || propChildId;
+
+  // ── Gözcü Karnesi 2.0 State ──
+  const [reportData, setReportData] = useState<AggregateProfileReport | null>(null);
+  const [loadingReport, setLoadingReport] = useState(false);
+  const [errorReport, setErrorReport] = useState<string | null>(null);
+
+  const isWide = width >= 768;
 
   // Handle child selection from switcher
   const handleSelectChild = async (child: Child) => {
@@ -40,6 +39,34 @@ export const DashboardScreen = ({ childId }: DashboardScreenProps) => {
     }
   }, [children, selectedChild, setSelectedChild]);
 
+  // Fetch and compile consolidated reports via ProfileAggregationService
+  useEffect(() => {
+    if (!effectiveChildId) return;
+
+    let active = true;
+    const fetchReport = async () => {
+      try {
+        setLoadingReport(true);
+        setErrorReport(null);
+        const report = await ProfileAggregationService.getAggregateReport(effectiveChildId, '90d'); // Fetch full 90d window to support client-side filtering
+        if (active) {
+          setReportData(report);
+          setLoadingReport(false);
+        }
+      } catch (err) {
+        if (active) {
+          setErrorReport('Veriler yüklenirken veya analiz edilirken bir hata oluştu.');
+          setLoadingReport(false);
+        }
+      }
+    };
+
+    void fetchReport();
+    return () => {
+      active = false;
+    };
+  }, [effectiveChildId]);
+
   return (
     <ScreenContainer scrollable contentContainerStyle={styles.scroll}>
       <View style={[styles.root, isWide && styles.rootWide]}>
@@ -48,7 +75,7 @@ export const DashboardScreen = ({ childId }: DashboardScreenProps) => {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.portalTitle}>Ebeveyn Portalı</Text>
-            <Text style={styles.portalSub}>Çocuğunuzun gelişimini izleyin ve yönetin.</Text>
+            <Text style={styles.portalSub}>Çocuğunuzun bilişsel gelişimini izleyin ve yönetin.</Text>
           </View>
           
           <View style={styles.headerRight}>
@@ -80,19 +107,17 @@ export const DashboardScreen = ({ childId }: DashboardScreenProps) => {
               >
                 <Text style={styles.primaryBtnText}>+ Çocuk Ekle</Text>
               </Pressable>
-              {Platform.OS !== 'web' && (
-                <Pressable
-                  onPress={() => navigationService.goToProfilePicker('dashboard_exit')}
-                  style={styles.backBtn}
-                >
-                  <Text style={styles.backBtnText}>Geri Dön</Text>
-                </Pressable>
-              )}
+              <Pressable
+                onPress={() => navigationService.goToProfilePicker('dashboard_exit')}
+                style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
+              >
+                <Text style={styles.backBtnText}>← Profil Sayfası</Text>
+              </Pressable>
           </View>
         </View>
 
         {/* ── Analytics Content ── */}
-        {!childId ? (
+        {!effectiveChildId ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyEmoji}>👋</Text>
             <Text style={styles.emptyTitle}>Hoş Geldiniz</Text>
@@ -101,37 +126,30 @@ export const DashboardScreen = ({ childId }: DashboardScreenProps) => {
             </Text>
           </View>
         ) : (
-          <View style={[styles.grid, isWide && styles.gridWide]}>
-            {/* Left Column: Skills & Insights */}
-            <View style={styles.column}>
-              <SkillSummarySection summary={summary} loading={loading} />
-              <InsightSection insight={insight} />
-            </View>
-
-            {/* Right Column: Trends & Details */}
-            <View style={[styles.column, isWide && styles.columnRight]}>
-              <ProgressChartSection data={progress} loading={loading} />
-              
-              {/* Extra Stats Placeholder or Management Shortcuts */}
-              <View style={styles.quickStats}>
-                <View style={styles.statBox}>
-                  <Text style={styles.statVal}>{progress.length}</Text>
-                  <Text style={styles.statLab}>Toplam Oturum</Text>
-                </View>
-                <View style={styles.statBox}>
-                  <Text style={styles.statVal}>
-                    {summary?.lastUpdated ? 'Bugün' : '-'}
-                  </Text>
-                  <Text style={styles.statLab}>Son Aktivite</Text>
-                </View>
-              </View>
-            </View>
-          </View>
+          <GozcuKarnesi
+            childId={effectiveChildId}
+            realProfile={reportData?.profile || null}
+            realReport={reportData?.report || null}
+            realTrendData={reportData?.trendData || []}
+            realLongitudinalReport={reportData?.longitudinalReport || null}
+            realAdaptiveRecommendations={reportData?.adaptiveRecommendations || null}
+            loading={loadingReport}
+          />
         )}
 
-        {error && (
+        {(errorReport) && (
           <View style={styles.errorBanner}>
-            <Text style={styles.errorText}>Veriler güncellenirken bir sorun oluştu.</Text>
+            <Text style={styles.errorText}>{errorReport}</Text>
+            <Pressable
+              onPress={() => {
+                queryClient.invalidateQueries({ queryKey: ['dashboard', effectiveChildId] });
+                // Re-trigger report aggregation
+                setReportData(null);
+              }}
+              style={({ pressed }) => [styles.retryBtn, pressed && styles.btnPressed]}
+            >
+              <Text style={styles.retryBtnText}>Tekrar Dene</Text>
+            </Pressable>
           </View>
         )}
       </View>
@@ -195,7 +213,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    zIndex: 1000, // For switcher dropdown
+    zIndex: 1000,
     gap: 16,
     flexWrap: 'wrap',
   },
@@ -234,48 +252,6 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
 
-  // ── Grid ──
-  grid: {
-    gap: 24,
-  },
-  gridWide: {
-    flexDirection: 'row',
-  },
-  column: {
-    flex: 1,
-    gap: 24,
-  },
-  columnRight: {
-    flex: 1.4, // Progress chart gets more space
-  },
-
-  // ── Stats ──
-  quickStats: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  statBox: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statVal: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#111827',
-  },
-  statLab: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-  },
-
   // ── States ──
   emptyState: {
     padding: 80,
@@ -308,11 +284,24 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#FECACA',
+    gap: 10,
+    alignItems: 'center',
   },
   errorText: {
     color: '#B91C1C',
     fontWeight: '600',
     fontSize: 14,
     textAlign: 'center',
+  },
+  retryBtn: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  retryBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
   },
 });

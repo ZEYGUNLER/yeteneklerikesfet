@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View, StyleProp, ViewStyle } from 'react-native';
+import React, { useRef } from 'react';
+import { Pressable, StyleSheet, Text, View, StyleProp, ViewStyle, Animated } from 'react-native';
 
 interface GameActionCardProps {
   children: React.ReactNode;
@@ -21,21 +21,46 @@ interface GameButtonProps {
   variant?: 'primary' | 'secondary';
 }
 
+// Rule 1: microinteraction press = 120–180ms
+// Rule 3: useNativeDriver: true always
+// Rule 2: scale only, no glow stacking
 export function GameButton({ onPress, title, disabled, variant = 'primary' }: GameButtonProps) {
   const isPrimary = variant === 'primary';
-  
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scale, {
+      toValue: isPrimary ? 0.97 : 0.96,
+      tension: 180,
+      friction: 10,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      tension: 180,
+      friction: 10,
+      useNativeDriver: true,
+    }).start();
+  };
+
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }) => [
-        isPrimary ? styles.button : styles.secondaryBtn,
-        disabled && (isPrimary ? styles.buttonDisabled : styles.secondaryBtnDisabled),
-        pressed && (isPrimary ? styles.buttonPressed : styles.secondaryBtnPressed),
-      ]}
-    >
-      <Text style={isPrimary ? styles.buttonText : styles.secondaryText}>{title}</Text>
-    </Pressable>
+    <Animated.View style={{ transform: [{ scale }], width: '100%' }}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled}
+        style={[
+          isPrimary ? styles.button : styles.secondaryBtn,
+          disabled && (isPrimary ? styles.buttonDisabled : styles.secondaryBtnDisabled),
+        ]}
+      >
+        <Text style={isPrimary ? styles.buttonText : styles.secondaryText}>{title}</Text>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -51,8 +76,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
     elevation: 2,
   },
   button: {
@@ -62,15 +87,10 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
     shadowRadius: 8,
     elevation: 4,
-  },
-  buttonPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.98 }],
-    shadowOpacity: 0.1,
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -89,9 +109,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     width: '100%',
   },
-  secondaryBtnPressed: {
-    backgroundColor: '#F3F4F6',
-  },
   secondaryBtnDisabled: {
     opacity: 0.5,
   },
@@ -101,3 +118,4 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 });
+

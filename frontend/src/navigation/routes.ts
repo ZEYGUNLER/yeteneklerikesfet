@@ -14,6 +14,7 @@ export const ROUTES = {
   // CHILD
   PROFILE_PICKER: '/profiles/picker',
   GAMES: '/games',
+  WORLD_MAP: '/games/map',
   GAME_PLAY: '/games/play',
 
   // PARENT
@@ -34,6 +35,7 @@ export const ROUTE_OWNERSHIP = {
   [ROUTES.REGISTER]: 'AUTH',
   [ROUTES.PROFILE_PICKER]: 'CHILD',
   [ROUTES.GAMES]: 'CHILD',
+  [ROUTES.WORLD_MAP]: 'CHILD',
   [ROUTES.GAME_PLAY]: 'CHILD',
   [ROUTES.DASHBOARD]: 'PARENT',
   [ROUTES.CHILDREN_LIST]: 'PARENT',

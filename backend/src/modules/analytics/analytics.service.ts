@@ -5,6 +5,7 @@ export type SessionMetrics = {
   score: number;
   duration: number;
   accuracy: number;
+  metadata?: Record<string, any>;
 };
 
 @Injectable()
@@ -156,12 +157,40 @@ export class AnalyticsService {
 
     const message =
       topSkill === 'memory'
-        ? 'Memory skill is improving'
+        ? 'Hafıza becerisi gelişiyor'
         : topSkill === 'attention'
-          ? 'Attention skill is improving'
-          : 'Logic skill is improving';
+          ? 'Dikkat becerisi gelişiyor'
+          : 'Mantık becerisi gelişiyor';
 
     return { skillProfile, message };
+  }
+
+  async getPlanningSessions(childId: string) {
+    const child = await this.prisma.child.findUnique({ where: { id: childId } });
+    if (!child) {
+      throw new NotFoundException('Child not found');
+    }
+
+    const sessions = await this.prisma.gameSession.findMany({
+      where: {
+        childId,
+        gameId: 'planning',
+        status: 'COMPLETED',
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        createdAt: true,
+        accuracy: true,
+        duration: true,
+        score: true,
+        metadata: true,
+      },
+    });
+
+    return {
+      sessions: sessions.filter(s => s.metadata && typeof s.metadata === 'object' && 'planning' in (s.metadata as Record<string, any>))
+    };
   }
 }
 

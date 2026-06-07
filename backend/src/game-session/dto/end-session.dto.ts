@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, IsObject } from 'class-validator';
 
 export class EndSessionDto {
   @IsString()
@@ -16,4 +16,8 @@ export class EndSessionDto {
   @IsOptional()
   @IsNumber()
   accuracy?: number;
+
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, any>;
 }

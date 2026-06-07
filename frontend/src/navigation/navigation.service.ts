@@ -39,14 +39,24 @@ export const navigationService = {
   },
   goToGameSummary: (params: { 
     score: number; 
-    duration: number; 
+    duration?: number; 
     accuracy: number; 
-    level?: number;
-    perfectRounds?: number;
-    totalRounds?: number;
+    totalCorrect?: number;
+    longestSequence?: number;
+    starsEarned?: number;
+    earnedXP?: number;
+    leveledUp?: number;
+    newAchievements?: string;
+    newUnlocks?: string;
+    // Attention-specific
+    gameType?: string;
+    attentionScore?: number;
+    inhibitionScore?: number;
+    avgReactionTime?: number;
+    bestStreak?: number;
   }) => {
     logNavigation(ROUTES.SUMMARY);
-    router.replace({ pathname: ROUTES.SUMMARY, params });
+    router.replace({ pathname: ROUTES.SUMMARY, params: params as any });
   },
 
   // --- PARENT FLOW ---

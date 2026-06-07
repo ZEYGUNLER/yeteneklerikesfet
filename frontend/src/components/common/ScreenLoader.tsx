@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, ActivityIndicator, StyleSheet, Text, Animated } from 'react-native';
 import { useTheme } from '@/theme';
 
 interface ScreenLoaderProps {
@@ -9,6 +9,16 @@ interface ScreenLoaderProps {
 
 export const ScreenLoader = ({ label, fullScreen = true }: ScreenLoaderProps) => {
   const { theme, spacing, textStyles } = useTheme();
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scale, { toValue: 1.05, duration: 1000, useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
 
   return (
     <View style={[
@@ -16,15 +26,17 @@ export const ScreenLoader = ({ label, fullScreen = true }: ScreenLoaderProps) =>
       fullScreen && styles.fullScreen,
       { backgroundColor: theme.colors.background }
     ]}>
-      <ActivityIndicator size="large" color={theme.colors.primary} />
-      {label && (
-        <Text style={[
-          textStyles.body, 
-          { color: theme.colors.textSecondary, marginTop: spacing.md }
-        ]}>
-          {label}
-        </Text>
-      )}
+      <Animated.View style={{ alignItems: 'center', transform: [{ scale }] }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        {label && (
+          <Text style={[
+            textStyles.body, 
+            { color: theme.colors.textSecondary, marginTop: spacing.md }
+          ]}>
+            {label}
+          </Text>
+        )}
+      </Animated.View>
     </View>
   );
 };

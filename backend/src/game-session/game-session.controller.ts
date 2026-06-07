@@ -21,6 +21,7 @@ export class GameSessionController {
       score: dto.score ?? 0,
       duration: dto.duration ?? 0,
       accuracy: dto.accuracy ?? 0,
+      metadata: dto.metadata,
     });
   }
 }

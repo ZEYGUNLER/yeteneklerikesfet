@@ -1,7 +1,11 @@
-import { useLocalSearchParams } from 'expo-router';
-import { Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
+import { useLocalSearchParams, router } from 'expo-router';
+import { Platform, Pressable, StyleSheet, Text, View, Animated } from 'react-native';
 import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { navigationService } from '@/navigation/navigation.service';
+import { RewardCeremony } from '@/components/progression/RewardCeremony';
+import { ACHIEVEMENTS, UNLOCKABLES } from '@/config/unlockables.config';
+import { ROUTES } from '@/navigation/routes';
+import { useState, useEffect, useRef } from 'react';
 
 function toNumber(value: string | string[] | undefined) {
   const raw = Array.isArray(value) ? value[0] : value;
@@ -9,54 +13,185 @@ function toNumber(value: string | string[] | undefined) {
   return Number.isFinite(n) ? n : 0;
 }
 
+// Durations within hard limits:
+// scorePopDuration = 350ms (celebratory, max 800ms)
+// statCardDuration = 250ms (microinteraction, 120–350ms)
+// confettiDuration = 600ms (celebratory, max 800ms)
+const SCORE_POP_DURATION = 350;
+const STAT_STAGGER = 80;
+const STAT_DURATION = 220;
+const CONFETTI_DURATION = 600;
+
 export function PostGameSummaryScreen() {
   const params = useLocalSearchParams<{
-    score?: string;
-    duration?: string;
-    accuracy?: string;
-    level?: string;
+    totalCorrect?: string;
+    longestSequence?: string;
+    starsEarned?: string;
+    earnedXP?: string;
+    leveledUp?: string;
+    newAchievements?: string;
+    newUnlocks?: string;
+    gameType?: string;
+    attentionScore?: string;
+    inhibitionScore?: string;
+    avgReactionTime?: string;
+    bestStreak?: string;
   }>();
 
-  const score = toNumber(params.score);
-  const duration = toNumber(params.duration);
-  const accuracy = toNumber(params.accuracy);
-  
-  // Mastery Data
-  const metadata = params.level ? JSON.parse(decodeURIComponent(params.level)) : {}; 
-  // Wait, level in params might be just a number or the metadata object stringified.
-  // Actually, useGameSession passes metadata. let's see how it's passed.
-  // In useGameSession: level: result.metadata?.highestLevel || 0
-  // So I might need to update navigationService or pass mastery as separate params.
-  // Let's assume for now I'll pass perfectRounds/totalRounds as separate params for reliability.
-  const level = toNumber(params.level);
+  const totalCorrect = toNumber(params.totalCorrect);
+  const longestSequence = toNumber(params.longestSequence);
+  const starsEarned = toNumber(params.starsEarned);
+  const earnedXP = toNumber(params.earnedXP);
+  const gameType = params.gameType ?? 'memory';
+  const attentionScore = toNumber(params.attentionScore);
+  const inhibitionScore = toNumber(params.inhibitionScore);
+  const avgReactionTime = toNumber(params.avgReactionTime);
+  const bestStreak = toNumber(params.bestStreak);
+
+  const isAttention = gameType === 'attention';
+
+  // ── Animation refs (useRef, never useState — Rule 3) ──
+  const scoreScale = useRef(new Animated.Value(0.4)).current;
+  const headerOpacity = useRef(new Animated.Value(0)).current;
+  const headerSlide = useRef(new Animated.Value(-16)).current;
+  // 3 stat cards
+  const statAnims = useRef([0, 1, 2].map(() => ({
+    opacity: new Animated.Value(0),
+    translateY: new Animated.Value(12),
+  }))).current;
+  // 3 confetti emojis — Rule 2: soft fade only, no movement animation
+  const confettiAnims = useRef([0, 1, 2].map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    // 1. Header slides in (250ms — microinteraction)
+    Animated.parallel([
+      Animated.timing(headerOpacity, { toValue: 1, duration: 250, useNativeDriver: true }),
+      Animated.timing(headerSlide, { toValue: 0, duration: 250, useNativeDriver: true }),
+    ]).start();
+
+    // 2. Score circle pops in with spring (celebratory — within 350ms hard cap)
+    Animated.spring(scoreScale, {
+      toValue: 1,
+      tension: 100,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
+
+    // 3. Confetti emojis fade in with 80ms stagger (soft, no movement — Rule 2)
+    confettiAnims.forEach((anim, i) => {
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: CONFETTI_DURATION,
+        delay: i * 100,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    // 4. Stat cards stagger in (220ms each, 80ms apart)
+    statAnims.forEach(({ opacity, translateY }, i) => {
+      const delay = 200 + i * STAT_STAGGER;
+      Animated.parallel([
+        Animated.timing(opacity, { toValue: 1, duration: STAT_DURATION, delay, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: 0, duration: STAT_DURATION, delay, useNativeDriver: true }),
+      ]).start();
+    });
+  }, []);
+
+  const [ceremonyQueue, setCeremonyQueue] = useState<any[]>([]);
+  const [currentCeremony, setCurrentCeremony] = useState<any>(null);
+
+  useEffect(() => {
+    const queue: any[] = [];
+    if (params.leveledUp === '1') {
+      queue.push({ type: 'level_up', title: 'Seviye Atladın!', subtitle: 'Artık daha güçlüsün!' });
+    }
+    if (params.newAchievements) {
+      params.newAchievements.split(',').forEach(id => {
+        const ach = ACHIEVEMENTS.find(a => a.id === id);
+        if (ach) queue.push({ type: 'achievement', title: ach.name, subtitle: ach.description, icon: ach.icon });
+      });
+    }
+    if (params.newUnlocks) {
+      params.newUnlocks.split(',').forEach(id => {
+        const unlock = UNLOCKABLES.find(u => u.id === id);
+        if (unlock) queue.push({ type: 'unlock', title: 'Yeni Eşya!', subtitle: unlock.name });
+      });
+    }
+    if (queue.length > 0) {
+      setCeremonyQueue(queue);
+      setCurrentCeremony(queue[0]);
+    }
+  }, []);
+
+  const handleNextCeremony = () => {
+    const nextQueue = ceremonyQueue.slice(1);
+    setCeremonyQueue(nextQueue);
+    setCurrentCeremony(nextQueue.length > 0 ? nextQueue[0] : null);
+  };
+
+  const confettiEmojis = isAttention ? ['🦉', '✨', '🦉'] : ['🌟', '✨', '🌟'];
 
   return (
     <ScreenContainer scrollable contentContainerStyle={styles.container}>
-      <View style={styles.celebration}>
-        <Text style={styles.confetti}>🎊 ✨ 🎊</Text>
-        <Text style={styles.title}>Harika İş Çıkardın!</Text>
-        <Text style={styles.subtitle}>Bölümü başarıyla tamamladın.</Text>
-      </View>
 
-      <View style={styles.scoreCircle}>
+      {/* ── Celebration Header ── */}
+      <Animated.View style={[styles.celebration, { opacity: headerOpacity, transform: [{ translateY: headerSlide }] }]}>
+        <View style={styles.confettiRow}>
+          {confettiEmojis.map((emoji, i) => (
+            <Animated.Text key={i} style={[styles.confettiEmoji, { opacity: confettiAnims[i] }]}>
+              {emoji}
+            </Animated.Text>
+          ))}
+        </View>
+        <Text style={styles.title}>{isAttention ? 'Dikkat Kulesi\'ni Tamamladın!' : 'Harika İş Çıkardın!'}</Text>
+        <Text style={styles.subtitle}>{isAttention ? 'Odaklandın, başardın!' : 'Bölümü başarıyla tamamladın.'}</Text>
+      </Animated.View>
+
+      {/* ── Stars Display ── */}
+      <Animated.View style={[styles.scoreCircle, { transform: [{ scale: scoreScale }] }]}>
         <View style={styles.scoreInner}>
-          <Text style={styles.scoreLabel}>PUAN</Text>
-          <Text style={styles.scoreValue}>{Math.round(score)}</Text>
+          <Text style={styles.scoreLabel}>YILDIZLAR</Text>
+          <Text style={styles.starsValue}>
+            {Array(starsEarned).fill('⭐').join('')}
+            {Array(3 - starsEarned).fill('☆').join('')}
+          </Text>
         </View>
+      </Animated.View>
+
+      {/* ── Stat Cards (staggered entrance) ── */}
+      <View style={styles.statsGrid}>
+        {(isAttention ? [
+          { emoji: '🎯', value: `${attentionScore}%`, label: 'Dikkat Skoru' },
+          { emoji: '🛡️', value: `${inhibitionScore}%`, label: 'Dürtü Kontrolü' },
+          { emoji: '🏆', value: `${bestStreak}`, label: 'En İyi Seri' },
+        ] : [
+          { emoji: '🎯', value: `${totalCorrect}`, label: 'Toplam Doğru' },
+          { emoji: '🧠', value: `${longestSequence}`, label: 'En Uzun Sekans' },
+          { emoji: '🏆', value: `3`, label: 'Dünya Tamamlandı' },
+        ]).map((stat, i) => (
+          <Animated.View
+            key={stat.label}
+            style={[
+              styles.statCard,
+              { opacity: statAnims[i].opacity, transform: [{ translateY: statAnims[i].translateY }] },
+            ]}
+          >
+            <Text style={styles.statEmoji}>{stat.emoji}</Text>
+            <Text style={styles.statValue}>{stat.value}</Text>
+            <Text style={styles.statLabel}>{stat.label}</Text>
+          </Animated.View>
+        ))}
       </View>
 
-      <View style={styles.statsGrid}>
-        <View style={styles.statCard}>
-          <Text style={styles.statEmoji}>⏱️</Text>
-          <Text style={styles.statValue}>{Math.round(duration)} sn</Text>
-          <Text style={styles.statLabel}>Süre</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statEmoji}>🎯</Text>
-          <Text style={styles.statValue}>{Math.round(accuracy * 100)}%</Text>
-          <Text style={styles.statLabel}>Başarı</Text>
-        </View>
-      </View>
+      {currentCeremony && (
+        <RewardCeremony
+          type={currentCeremony.type}
+          title={currentCeremony.title}
+          subtitle={currentCeremony.subtitle}
+          icon={currentCeremony.icon}
+          onClose={handleNextCeremony}
+        />
+      )}
 
       {/* ── Reward Moment ── */}
       <View style={styles.rewardCard}>
@@ -67,16 +202,17 @@ export function PostGameSummaryScreen() {
         </View>
       </View>
 
+      {/* ── Actions ── */}
       <View style={styles.actions}>
         <Pressable
-          onPress={() => navigationService.goToGames()}
+          onPress={() => navigationService.goToGamePlay(gameType)}
           style={({ pressed }) => [styles.primaryBtn, pressed && styles.primaryBtnPressed]}
         >
           <Text style={styles.primaryBtnText}>Tekrar Oyna</Text>
         </Pressable>
 
         <Pressable
-          onPress={() => navigationService.goToProfilePicker('summary_back')}
+          onPress={() => navigationService.goToGames()}
           style={({ pressed }) => [styles.secondaryBtn, pressed && styles.secondaryBtnPressed]}
         >
           <Text style={styles.secondaryBtnText}>Ana Menüye Dön</Text>
@@ -85,6 +221,7 @@ export function PostGameSummaryScreen() {
     </ScreenContainer>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -97,9 +234,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  confetti: {
-    fontSize: 40,
+  confettiRow: {
+    flexDirection: 'row',
+    gap: 12,
     marginBottom: 8,
+  },
+  confettiEmoji: {
+    fontSize: 36,
   },
   title: {
     fontSize: 32,
@@ -116,16 +257,16 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-    borderWidth: 4,
-    borderColor: '#6366F1',
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    borderWidth: 3,
+    borderColor: 'rgba(99, 102, 241, 0.5)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
   },
   scoreInner: {
     alignItems: 'center',
@@ -136,10 +277,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 2,
   },
-  scoreValue: {
-    fontSize: 64,
-    fontWeight: '900',
-    color: '#F8FAFC',
+  starsValue: {
+    fontSize: 48,
+    marginTop: 8,
+    color: '#FBBF24',
   },
   statsGrid: {
     flexDirection: 'row',

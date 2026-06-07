@@ -17,17 +17,19 @@ interface ChildLayoutProps {
  * No analytics, no admin structures.
  */
 export const ChildLayout = ({ children }: ChildLayoutProps) => {
-  const { selectedChild } = useChildContext();
+  const { selectedChild, isRestoring } = useChildContext();
   const pathname = usePathname();
 
-  // Child Guard: Protect all child routes except profile picker
+  // Child Guard: Protect all child routes except profile picker.
+  // Wait until isRestoring is false so AsyncStorage has been read.
   useEffect(() => {
     const isProfilePicker = pathname === ROUTES.PROFILE_PICKER;
-    if (!selectedChild && !isProfilePicker) {
+    if (isRestoring || isProfilePicker) return;
+    if (!selectedChild) {
       if (__DEV__) console.log('[ChildGuard] No child selected, redirecting to picker');
       navigationService.goToProfilePicker('child_guard_active');
     }
-  }, [selectedChild, pathname]);
+  }, [selectedChild, pathname, isRestoring]);
 
   // Safety Layer: Proactively redirect away from parent routes if accidentally entered
   useEffect(() => {

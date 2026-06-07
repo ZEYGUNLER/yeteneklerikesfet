@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, View, ViewStyle, StyleProp } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, ViewStyle, StyleProp, Animated } from 'react-native';
 
 interface DashboardCardProps {
   title?: string;
@@ -7,6 +7,7 @@ interface DashboardCardProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   headerRight?: React.ReactNode;
+  delay?: number;
 }
 
 /**
@@ -17,10 +18,31 @@ export const DashboardCard = ({
   subtitle, 
   children, 
   style,
-  headerRight 
+  headerRight,
+  delay = 0,
 }: DashboardCardProps) => {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(10)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 300,
+        delay,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 300,
+        delay,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [delay]);
+
   return (
-    <View style={[styles.card, style]}>
+    <Animated.View style={[styles.card, style, { opacity, transform: [{ translateY }] }]}>
       {(title || headerRight) && (
         <View style={styles.header}>
           <View style={styles.titleBlock}>
@@ -33,7 +55,7 @@ export const DashboardCard = ({
       <View style={styles.content}>
         {children}
       </View>
-    </View>
+    </Animated.View>
   );
 };
 

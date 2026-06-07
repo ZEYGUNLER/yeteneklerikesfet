@@ -76,6 +76,9 @@ export function useGameMetrics() {
       : 0;
     const stdDev = Math.sqrt(variance);
 
+    const longestSequence = highestLevel;
+    const starsEarned = accuracy >= 0.90 ? 3 : (accuracy >= 0.70 ? 2 : (accuracy >= 0.50 ? 1 : 0));
+
     return {
       score: metrics.score,
       accuracy,
@@ -86,6 +89,8 @@ export function useGameMetrics() {
         mistakes,
         maxConsecutiveMistakes,
         highestLevel,
+        longestSequence,
+        starsEarned,
         avgReactionTime: Math.round(avgReactionTime),
         fastestReaction,
         slowestReaction,

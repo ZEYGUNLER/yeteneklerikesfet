@@ -30,5 +30,10 @@ export class AnalyticsController {
       days: Number.isFinite(parsedDays) ? parsedDays : undefined,
     });
   }
+
+  @Get('planning-sessions/:childId')
+  getPlanningSessions(@Param('childId') childId: string) {
+    return this.analytics.getPlanningSessions(childId);
+  }
 }
 

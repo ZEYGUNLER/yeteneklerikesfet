@@ -36,7 +36,7 @@ export const Button = ({
   leftIcon,
   rightIcon,
 }: ButtonProps) => {
-  const { theme, spacing, textStyles } = useTheme();
+  const { theme, world, spacing, textStyles } = useTheme();
 
   const getVariantStyle = () => {
     switch (variant) {
@@ -57,7 +57,7 @@ export const Button = ({
     if (disabled) return theme.colors.textSecondary;
     switch (variant) {
       case 'primary':
-        return theme.world === 'child' ? '#FFFFFF' : '#FFFFFF';
+        return world === 'child' ? '#FFFFFF' : '#FFFFFF';
       case 'outline':
       case 'ghost':
         return theme.colors.primary;

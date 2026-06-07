@@ -61,6 +61,21 @@ export class GameSessionService {
       throw new BadRequestException('Invalid accuracy');
     }
 
+    let finalMetadata = metrics?.metadata ?? undefined;
+    if (finalMetadata?.planning) {
+      const p = finalMetadata.planning;
+      if (p.version !== 1 || 
+          typeof p.routeEfficiency !== 'number' ||
+          typeof p.optimalPathRatio !== 'number' ||
+          typeof p.replanningQuality !== 'number' ||
+          typeof p.planningTimeMs !== 'number' ||
+          typeof p.hints !== 'number' ||
+          typeof p.completionRate !== 'number') {
+        console.warn(`[GameSessionService] Dropping malformed planning telemetry for session ${sessionId}`);
+        finalMetadata = undefined; // Drop metadata instead of crashing the save
+      }
+    }
+
     await this.prisma.gameSession.update({
       where: { id: sessionId },
       data: {
@@ -69,6 +84,7 @@ export class GameSessionService {
         score,
         duration,
         accuracy,
+        metadata: finalMetadata,
       },
     });
 

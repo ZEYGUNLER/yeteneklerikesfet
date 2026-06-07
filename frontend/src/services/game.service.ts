@@ -10,9 +10,9 @@ export type GameDefinition = {
 export const GAMES: GameDefinition[] = [
   {
     id: 'memory',
-    title: 'Hafıza Bahçesi',
-    description: 'Şekilleri hatırla ve doğru sırayla dokun!',
-    icon: '🧠',
+    title: 'Hazine Haritası',
+    description: 'Gizemli ada haritasında kayıp yolları planla!',
+    icon: '🗺️',
   },
   {
     id: 'attention',

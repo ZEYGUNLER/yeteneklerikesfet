@@ -3,18 +3,21 @@ import { StyleSheet, View, StyleProp, ViewStyle, Platform } from 'react-native';
 import { ScreenContainer } from '../common/ScreenContainer';
 import { EnvironmentEffect } from './EnvironmentEffect';
 import { getIdentity } from '@/config/gameIdentity.config';
+import { MascotPresence } from './MascotPresence';
+import { MascotId } from '@/config/mascot.config';
 
 interface GameLayoutProps {
   children: React.ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
   gameId?: string;
+  onMascotPress?: () => void;
 }
 
 /**
  * Standardized layout for all games.
  * Now identity-aware: adapts background and atmospheric effects based on gameId.
  */
-export function GameLayout({ children, contentContainerStyle, gameId }: GameLayoutProps) {
+export function GameLayout({ children, contentContainerStyle, gameId, onMascotPress }: GameLayoutProps) {
   const identity = getIdentity(gameId || 'attention');
 
   return (
@@ -29,6 +32,7 @@ export function GameLayout({ children, contentContainerStyle, gameId }: GameLayo
       <View style={styles.inner}>
         {children}
       </View>
+      <MascotPresence mascotId={identity.mascotId as MascotId} onPress={onMascotPress} />
     </ScreenContainer>
   );
 }

@@ -30,12 +30,19 @@ export const mapProgress = (response: any): ProgressPoint[] => {
   if (!Array.isArray(response)) {
     return [];
   }
-  return response.map((item) => ({
-    date: String(item?.date ?? item?.createdAt ?? ''),
-    memory: clampSkill(item?.memory),
-    attention: clampSkill(item?.attention),
-    logic: clampSkill(item?.logic),
-  }));
+  return response.map((item) => {
+    const rawDate = item?.date ?? item?.createdAt ?? '';
+    // Convert full ISO timestamp ("2026-06-04T11:43:25.754Z") to "YYYY-MM-DD"
+    const date = rawDate
+      ? new Date(rawDate).toISOString().split('T')[0]
+      : '';
+    return {
+      date,
+      memory: clampSkill(item?.memory),
+      attention: clampSkill(item?.attention),
+      logic: clampSkill(item?.logic),
+    };
+  });
 };
 
 export const mapInsight = (response: any): DashboardInsight => {
@@ -46,7 +53,7 @@ export const mapInsight = (response: any): DashboardInsight => {
       : 'neutral';
 
   return {
-    message: response?.message ?? 'No insight available yet.',
+    message: response?.message ?? 'Henüz yeterli veri yok.',
     trend: normalizedTrend,
   };
 };

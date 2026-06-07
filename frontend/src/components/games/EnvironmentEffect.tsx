@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Animated, View, Dimensions } from 'react-native';
 import { GameIdentity } from '@/config/gameIdentity.config';
+import { immersionSafetyRules } from '@/services/immersionSafetyRules';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -13,7 +14,14 @@ interface EnvironmentEffectProps {
  * Renders subtle floating particles or ambient glows without blocking the JS thread.
  */
 export const EnvironmentEffect = ({ identity }: EnvironmentEffectProps) => {
-  const particles = Array.from({ length: identity.particles.count });
+  const [particleCount, setParticleCount] = useState(0);
+
+  useEffect(() => {
+    // Determine safe particle count on mount to respect low-motion mode
+    setParticleCount(immersionSafetyRules.getSafeParticleCount(identity.particles.count));
+  }, [identity.particles.count]);
+
+  const particles = Array.from({ length: particleCount });
 
   return (
     <View style={styles.container} pointerEvents="none">

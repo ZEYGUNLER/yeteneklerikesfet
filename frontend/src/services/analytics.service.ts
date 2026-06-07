@@ -10,5 +10,8 @@ export const analyticsService = {
   getInsight(childId: string) {
     return api.get(`/analytics/dashboard/${childId}`);
   },
+  getPlanningSessions(childId: string) {
+    return api.get(`/analytics/planning-sessions/${childId}`);
+  },
 };
 

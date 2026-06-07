@@ -1,11 +1,53 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, Animated, Easing } from 'react-native';
 import { DashboardCard } from './DashboardCard';
 import type { SkillSummary } from '../../types/dashboard.types';
 
 interface SkillSummarySectionProps {
   summary: SkillSummary | null;
   loading: boolean;
+}
+
+function SkillBar({ skill, loading }: { skill: any, loading: boolean }) {
+  const widthAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(widthAnim, {
+      toValue: loading ? 0 : skill.value,
+      duration: 800,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [skill.value, loading]);
+
+  const width = widthAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ['0%', '100%']
+  });
+
+  return (
+    <View style={styles.skillItem}>
+      <View style={styles.skillHeader}>
+        <View style={[styles.iconBox, { backgroundColor: skill.color + '15' }]}>
+          <Text style={styles.icon}>{skill.icon}</Text>
+        </View>
+        <View>
+          <Text style={styles.skillLabel}>{skill.label}</Text>
+          <Text style={styles.skillValue}>
+            {loading ? '...' : `${Math.round(skill.value)}%`}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.track}>
+        <Animated.View 
+          style={[
+            styles.bar, 
+            { backgroundColor: skill.color, width }
+          ]} 
+        />
+      </View>
+    </View>
+  );
 }
 
 export const SkillSummarySection = ({ summary, loading }: SkillSummarySectionProps) => {
@@ -22,27 +64,7 @@ export const SkillSummarySection = ({ summary, loading }: SkillSummarySectionPro
     >
       <View style={styles.grid}>
         {skills.map((skill) => (
-          <View key={skill.id} style={styles.skillItem}>
-            <View style={styles.skillHeader}>
-              <View style={[styles.iconBox, { backgroundColor: skill.color + '15' }]}>
-                <Text style={styles.icon}>{skill.icon}</Text>
-              </View>
-              <View>
-                <Text style={styles.skillLabel}>{skill.label}</Text>
-                <Text style={styles.skillValue}>
-                  {loading ? '...' : `${Math.round(skill.value)}%`}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.track}>
-              <View 
-                style={[
-                  styles.bar, 
-                  { backgroundColor: skill.color, width: `${loading ? 0 : skill.value}%` }
-                ]} 
-              />
-            </View>
-          </View>
+          <SkillBar key={skill.id} skill={skill} loading={loading} />
         ))}
       </View>
     </DashboardCard>
